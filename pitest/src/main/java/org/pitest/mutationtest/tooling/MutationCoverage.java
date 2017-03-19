@@ -14,16 +14,6 @@
  */
 package org.pitest.mutationtest.tooling;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.logging.Logger;
-
 import org.pitest.classinfo.ClassByteArraySource;
 import org.pitest.classinfo.ClassInfo;
 import org.pitest.classinfo.ClassName;
@@ -32,11 +22,13 @@ import org.pitest.classpath.ClassPathByteArraySource;
 import org.pitest.classpath.CodeSource;
 import org.pitest.coverage.CoverageDatabase;
 import org.pitest.coverage.CoverageGenerator;
+import org.pitest.coverage.IncludeInCoverageFilter;
 import org.pitest.coverage.TestInfo;
 import org.pitest.functional.FCollection;
 import org.pitest.functional.prelude.Prelude;
 import org.pitest.help.Help;
 import org.pitest.help.PitHelpError;
+
 import org.pitest.mutationtest.HistoryStore;
 import org.pitest.mutationtest.ListenerArguments;
 import org.pitest.mutationtest.MutationAnalyser;
@@ -63,22 +55,36 @@ import org.pitest.util.Log;
 import org.pitest.util.StringUtil;
 import org.pitest.util.Timings;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.logging.Logger;
+
 public class MutationCoverage {
 
-  private static final int         MB  = 1024 * 1024;
+  private static final int MB = 1024 * 1024;
 
-  private static final Logger      LOG = Log.getLogger();
-  private final ReportOptions      data;
+  private static final Logger LOG = Log.getLogger();
+  private final ReportOptions data;
 
   private final MutationStrategies strategies;
-  private final Timings            timings;
-  private final CodeSource         code;
-  private final File               baseDir;
-  private final SettingsFactory    settings;
+  private final Timings timings;
+  private final CodeSource code;
+  private final File baseDir;
+  private final SettingsFactory settings;
 
   public MutationCoverage(final MutationStrategies strategies,
-      final File baseDir, final CodeSource code, final ReportOptions data,
-      final SettingsFactory settings, final Timings timings) {
+                          final File baseDir, final CodeSource code, final ReportOptions data,
+                          final SettingsFactory settings, final Timings timings) {
     this.strategies = strategies;
     this.data = data;
     this.settings = settings;
@@ -101,37 +107,47 @@ public class MutationCoverage {
 
     LOG.fine("System class path is " + System.getProperty("java.class.path"));
     LOG.fine("Maximum available memory is " + (runtime.maxMemory() / MB)
-        + " mb");
+            + " mb");
 
     final long t0 = System.currentTimeMillis();
 
     verifyBuildSuitableForMutationTesting();
 
     checkExcludedRunners();
-    
-    final CoverageDatabase coverageData = coverage().calculateCoverage();
+
+    CoverageDatabase coverageData = coverage().calculateCoverage();
+
+    Path changesPath = Paths.get("changes.csv");
+    if (Files.exists(changesPath)) {
+      List<String> allChanges = Files.readAllLines(changesPath);
+      List<String> mainClasses = Arrays.asList(allChanges.get(0).split(","));
+      List<String> testClasses = Arrays.asList(allChanges.get(1).split(","));
+      IncludeInCoverageFilter filter = new IncludeInCoverageFilter(mainClasses, testClasses);
+
+      coverageData = coverageData.filter(filter);
+    }
 
     LOG.fine("Used memory after coverage calculation "
-        + ((runtime.totalMemory() - runtime.freeMemory()) / MB) + " mb");
+            + ((runtime.totalMemory() - runtime.freeMemory()) / MB) + " mb");
     LOG.fine("Free Memory after coverage calculation "
-        + (runtime.freeMemory() / MB) + " mb");
+            + (runtime.freeMemory() / MB) + " mb");
 
     final MutationStatisticsListener stats = new MutationStatisticsListener();
 
     final MutationEngine engine = this.strategies.factory().createEngine(
-        this.data.isMutateStaticInitializers(),
-        Prelude.or(this.data.getExcludedMethods()),
-        this.data.getLoggingClasses(), this.data.getMutators(),
-        this.data.isDetectInlinedCode());
+            this.data.isMutateStaticInitializers(),
+            Prelude.or(this.data.getExcludedMethods()),
+            this.data.getLoggingClasses(), this.data.getMutators(),
+            this.data.isDetectInlinedCode());
 
     final List<MutationResultListener> config = createConfig(t0, coverageData,
-        stats, engine);
+            stats, engine);
 
     history().initialize();
 
     this.timings.registerStart(Timings.Stage.BUILD_MUTATION_TESTS);
     final List<MutationAnalysisUnit> tus = buildMutationTests(coverageData,
-        engine);
+            engine);
     this.timings.registerEnd(Timings.Stage.BUILD_MUTATION_TESTS);
 
     LOG.info("Created  " + tus.size() + " mutation test units");
@@ -140,12 +156,12 @@ public class MutationCoverage {
     recordClassPath(coverageData);
 
     LOG.fine("Used memory before analysis start "
-        + ((runtime.totalMemory() - runtime.freeMemory()) / MB) + " mb");
+            + ((runtime.totalMemory() - runtime.freeMemory()) / MB) + " mb");
     LOG.fine("Free Memory before analysis start " + (runtime.freeMemory() / MB)
-        + " mb");
+            + " mb");
 
     final MutationAnalysisExecutor mae = new MutationAnalysisExecutor(
-        numberOfThreads(), config);
+            numberOfThreads(), config);
     this.timings.registerStart(Timings.Stage.RUN_MUTATION_TESTS);
     mae.run(tus);
     this.timings.registerEnd(Timings.Stage.RUN_MUTATION_TESTS);
@@ -155,7 +171,7 @@ public class MutationCoverage {
     printStats(stats);
 
     return new CombinedStatistics(stats.getStatistics(),
-        coverageData.createSummary());
+            coverageData.createSummary());
 
   }
 
@@ -172,23 +188,23 @@ public class MutationCoverage {
     }
   }
 
-private int numberOfThreads() {
+  private int numberOfThreads() {
     return Math.max(1, this.data.getNumberOfThreads());
   }
 
   private List<MutationResultListener> createConfig(final long t0,
-      final CoverageDatabase coverageData,
-      final MutationStatisticsListener stats, final MutationEngine engine) {
+                                                    final CoverageDatabase coverageData,
+                                                    final MutationStatisticsListener stats, final MutationEngine engine) {
     final List<MutationResultListener> ls = new ArrayList<MutationResultListener>();
 
     ls.add(stats);
 
     final ListenerArguments args = new ListenerArguments(
-        this.strategies.output(), coverageData, new SmartSourceLocator(
+            this.strategies.output(), coverageData, new SmartSourceLocator(
             this.data.getSourceDirs()), engine, t0);
 
     final MutationResultListener mutationReportListener = this.strategies
-        .listenerFactory().getListener(this.data.getFreeFormProperties(), args);
+            .listenerFactory().getListener(this.data.getFreeFormProperties(), args);
 
     ls.add(mutationReportListener);
     ls.add(new HistoryListener(history()));
@@ -202,17 +218,17 @@ private int numberOfThreads() {
   private void recordClassPath(final CoverageDatabase coverageData) {
     final Set<ClassName> allClassNames = getAllClassesAndTests(coverageData);
     final Collection<HierarchicalClassId> ids = FCollection.map(
-        this.code.getClassInfo(allClassNames), ClassInfo.toFullClassId());
+            this.code.getClassInfo(allClassNames), ClassInfo.toFullClassId());
     history().recordClassPath(ids, coverageData);
   }
 
   private Set<ClassName> getAllClassesAndTests(
-      final CoverageDatabase coverageData) {
+          final CoverageDatabase coverageData) {
     final Set<ClassName> names = new HashSet<ClassName>();
     for (final ClassName each : this.code.getCodeUnderTestNames()) {
       names.add(each);
       FCollection.mapTo(coverageData.getTestsForClass(each),
-          TestInfo.toDefiningClassName(), names);
+              TestInfo.toDefiningClassName(), names);
     }
     return names;
   }
@@ -243,38 +259,42 @@ private int numberOfThreads() {
   }
 
   private List<MutationAnalysisUnit> buildMutationTests(
-      final CoverageDatabase coverageData, final MutationEngine engine) {
+          final CoverageDatabase coverageData, final MutationEngine engine) {
 
     final MutationConfig mutationConfig = new MutationConfig(engine, coverage()
-        .getLaunchOptions());
+            .getLaunchOptions());
 
     ClassByteArraySource bas = new ClassPathByteArraySource(
-        this.data.getClassPath());
+            this.data.getClassPath());
 
     TestPrioritiser testPrioritiser = this.settings.getTestPrioritiser()
-        .makeTestPrioritiser(this.data.getFreeFormProperties(), this.code,
-            coverageData);
+            .makeTestPrioritiser(this.data.getFreeFormProperties(), this.code,
+                    coverageData);
 
     final MutationSource source = new MutationSource(mutationConfig,
-        makeFilter().createFilter(this.data.getFreeFormProperties(), this.code,
-            this.data.getMaxMutationsPerClass()), testPrioritiser, bas);
+            makeFilter().createFilter(this.data.getFreeFormProperties(), this.code,
+                    this.data.getMaxMutationsPerClass()), testPrioritiser, bas);
 
     final MutationAnalyser analyser = new IncrementalAnalyser(
-        new DefaultCodeHistory(this.code, history()), coverageData);
+            new DefaultCodeHistory(this.code, history()), coverageData);
 
     final WorkerFactory wf = new WorkerFactory(this.baseDir, coverage()
-        .getConfiguration(), mutationConfig,
-        new PercentAndConstantTimeoutStrategy(this.data.getTimeoutFactor(),
-            this.data.getTimeoutConstant()), this.data.isVerbose(), this.data
+            .getConfiguration(), mutationConfig,
+            new PercentAndConstantTimeoutStrategy(this.data.getTimeoutFactor(),
+                    this.data.getTimeoutConstant()), this.data.isVerbose(), this.data
             .getClassPath().getLocalClassPath());
 
     MutationGrouper grouper = this.settings.getMutationGrouper().makeFactory(
-        this.data.getFreeFormProperties(), this.code,
-        this.data.getNumberOfThreads(), this.data.getMutationUnitSize());
+            this.data.getFreeFormProperties(), this.code,
+            this.data.getNumberOfThreads(), this.data.getMutationUnitSize());
     final MutationTestBuilder builder = new MutationTestBuilder(wf, analyser,
-        source, grouper);
+            source, grouper);
 
-    return builder.createMutationTestUnits(this.code.getCodeUnderTestNames());
+    Set<ClassName> classNames = coverageData.classNames();
+
+    Set<ClassName> codeUnderTestNames = this.code.getCodeUnderTestNames();
+    codeUnderTestNames.retainAll(classNames);
+    return builder.createMutationTestUnits(codeUnderTestNames);
   }
 
   private MutationFilterFactory makeFilter() {

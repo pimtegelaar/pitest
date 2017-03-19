@@ -2,6 +2,7 @@ package org.pitest.coverage;
 
 import java.math.BigInteger;
 import java.util.Collection;
+import java.util.Set;
 
 import org.pitest.classinfo.ClassInfo;
 import org.pitest.classinfo.ClassName;
@@ -21,5 +22,9 @@ public interface CoverageDatabase {
   Collection<ClassInfo> getClassesForFile(String sourceFile, String packageName);
 
   CoverageSummary createSummary();
+
+  CoverageDatabase filter(IncludeInCoverageFilter filter);
+
+  Set<ClassName> classNames();
 
 }

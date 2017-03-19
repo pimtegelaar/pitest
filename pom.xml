@@ -74,8 +74,8 @@
 	<profiles>
 		<profile>
 			<id>java8</id>
-			<!-- can only verify java 8 when running with java 8. Would be preferable 
-				to allways make this check using maven toolchains, but need to see if cloudbees 
+			<!-- can only verify java 8 when running with java 8. Would be preferable
+				to allways make this check using maven toolchains, but need to see if cloudbees
 				can support this -->
 			<activation>
 				<jdk>1.8</jdk>
@@ -154,8 +154,8 @@
 
 	<build>
 
-		<!-- specification of versions of all plugins used in any module also common 
-			configuration is specified there (but module-specific stuff is specified 
+		<!-- specification of versions of all plugins used in any module also common
+			configuration is specified there (but module-specific stuff is specified
 			in other pom.xml files) -->
 		<pluginManagement>
 			<plugins>
@@ -191,7 +191,7 @@
 							<configuration>
 								<failOnViolation>true</failOnViolation>
 								<configLocation>pitest/checkstyle.xml</configLocation>
-                                                                <sourceDirectory>${project.build.sourceDirectory}</sourceDirectory>	
+                                                                <sourceDirectory>${project.build.sourceDirectory}</sourceDirectory>
 							</configuration>
 						</execution>
 					</executions>
@@ -202,8 +202,8 @@
 					<artifactId>maven-compiler-plugin</artifactId>
 					<version>3.1</version>
 					<configuration>
-						<source>1.6</source>
-						<target>1.6</target>
+						<source>1.8</source>
+						<target>1.8</target>
 					</configuration>
 				</plugin>
 				<plugin>
@@ -293,7 +293,7 @@
 		</repository>
 	</distributionManagement>
 
-	<!-- versions of libraries which are used in different projects or which 
+	<!-- versions of libraries which are used in different projects or which
 		are used for few artifacts -->
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

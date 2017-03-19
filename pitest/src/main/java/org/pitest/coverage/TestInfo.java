@@ -125,4 +125,7 @@ public final class TestInfo {
     return string.intern();
   }
 
+  public String getDefiningClass() {
+    return definingClass;
+  }
 }
