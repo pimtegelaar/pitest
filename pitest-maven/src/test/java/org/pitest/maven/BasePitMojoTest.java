@@ -86,7 +86,7 @@ public abstract class BasePitMojoTest extends AbstractMojoTestCase {
         "  <build>\n" + //
         "    <plugins>\n" + //
         "      <plugin>\n" + //
-        "        <groupId>org.pitest</groupId>\n" + //
+        "        <groupId>com.tegeltech</groupId>\n" + //
         "        <artifactId>pitest-maven</artifactId>\n" + //
         "        <configuration>\n" + config + //
         "        </configuration>\n" + //

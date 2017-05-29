@@ -33,7 +33,7 @@
 	<reporting>
 	   <plugins>
 	       <plugin>
-	           <groupId>org.pitest</groupId>
+	           <groupId>com.tegeltech</groupId>
 	           <artifactId>pitest-maven</artifactId>
 	           <version>${pit.version}</version>
 	           <configuration>
